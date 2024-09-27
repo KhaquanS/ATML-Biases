@@ -66,8 +66,8 @@ def eval_step_clip(model, classifier, dataloader, criterion, device, labels, mod
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='Infer Pretrained Models')
-    parser.add_argument('--model_name', type=str, default='resnet-34', help='Either resnet-18 or resnet-34 or resnet-50 or clip-vit or clip-classifier. Default is resnet-34.')
-    parser.add_argument('--dataset', type=str, help='One of [MNIST, CIFAR-10, CIFAR-100, PACS, SVHN]. Default is CIFAR-10.', default='CIFAR-10')
+    parser.add_argument('--model_name', type=str, default='clip-vit', help='Either clip-vit or clip-classifier. Default is clip-vit')
+    parser.add_argument('--dataset', type=str, help='One of [MNIST, CIFAR-10, CIFAR-100, PACS, SVHN]. Default is CIFAR-10.', default='CIFAR-10', required=False)
     parser.add_argument('--out_dir', type=str, help='Output directory. Default is output.', default='output')
     parser.add_argument('--num_patches', type=int, help='Number of patches for ViT. Choose from 16 and 32. Default is 32', default=32)
     parser.add_argument('--num_classes', type=int, help='Number of classification classes. 10 (default) for all datasets except cifar-100 which has 100 classes.', default=10)
@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     if args.bias_evaluation == True:
         print("Bias Evaluation Set to True... Evaluating on inductive biases")
-        train_ds, val_ds, class_text = get_custom_data(train_path=args.train_path, val_path=args.val_path, 
+        train_ds, test_ds, class_text = get_custom_data(train_path=args.train_path, val_path=args.val_path, 
                                                         processor=processor)
         class_text = class_text.to(device)
     else:
@@ -115,6 +115,7 @@ if __name__ == "__main__":
         eval_loss_nonsl, eval_acc_nonsl = eval_step_clip(model, classifier, train_dl, criterion, device, class_text, args.modal_name, args.dataset)
         print(f'============ Eval Acc on Non Stylized Dataset: {eval_acc_nonsl*100:.4f}%  ============')
         print(f'============ Eval Loss on Non Stylized Dataset: {eval_loss_nonsl:.4f}  ============')
+    
     eval_loss, eval_acc = eval_step_clip(model, classifier, test_dl, criterion, device, class_text, args.model_name, args.dataset)
 
     print(f'============ Eval Acc on {args.dataset}: {eval_acc*100:.4f}%  ============')

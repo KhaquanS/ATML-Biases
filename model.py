@@ -21,7 +21,7 @@ def load_resnet_ft(model_name, ft_type):
         for param in model.parameters():
             param.requires_grad = False  # Freeze all layers
         # Unfreeze the classifier (fully connected layer)
-        for param in model.fc.parameters()
+        for param in model.fc.parameters():
             param.requires_grad = True
 
     return model
