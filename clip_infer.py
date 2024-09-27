@@ -112,13 +112,15 @@ if __name__ == "__main__":
     criterion = nn.CrossEntropyLoss()
     
     if args.bias_evaluation == True:
-        eval_loss_nonsl, eval_acc_nonsl = eval_step_clip(model, classifier, train_dl, criterion, device, class_text, args.modal_name, args.dataset)
+        eval_loss_nonsl, eval_acc_nonsl = eval_step_clip(model, classifier, train_dl, criterion, device, class_text, args.model_name, args.dataset)
         print(f'============ Eval Acc on Non Stylized Dataset: {eval_acc_nonsl*100:.4f}%  ============')
         print(f'============ Eval Loss on Non Stylized Dataset: {eval_loss_nonsl:.4f}  ============')
-    
-    eval_loss, eval_acc = eval_step_clip(model, classifier, test_dl, criterion, device, class_text, args.model_name, args.dataset)
-
-    print(f'============ Eval Acc on {args.dataset}: {eval_acc*100:.4f}%  ============')
-    print(f'============ Eval Loss on {args.dataset}: {eval_loss:.4f}  ============')
-    
-
+        
+        eval_loss, eval_acc = eval_step_clip(model, classifier, test_dl, criterion, device, class_text, args.model_name, args.dataset)
+        print(f'============ Eval Acc on Stylized Dataset: {eval_acc*100:.4f}%  ============')
+        print(f'============ Eval Loss on Stylized Dataset: {eval_loss:.4f}  ============')
+        
+    else:  
+        eval_loss, eval_acc = eval_step_clip(model, classifier, test_dl, criterion, device, class_text, args.model_name, args.dataset)
+        print(f'============ Eval Acc on {args.dataset}: {eval_acc*100:.4f}%  ============')
+        print(f'============ Eval Loss on {args.dataset}: {eval_loss:.4f}  ============')

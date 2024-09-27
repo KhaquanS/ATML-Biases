@@ -32,7 +32,7 @@ def get_custom_data(train_path: str, val_path: str, model_name: Optional[str] = 
     if processor is not None:
         nonstl_dataset = datasets.ImageFolder(train_path, transform=processor)
         stl_dataset = datasets.ImageFolder(val_path, transform=processor)
-        labels = torch.cat([clip.tokenize(f"A photo of a {i}" for i in val_dataset.classes)])
+        labels = torch.cat([clip.tokenize(f"A photo of a {i}" for i in stl_dataset.classes)])
 
         return nonstl_dataset, stl_dataset, labels
 
