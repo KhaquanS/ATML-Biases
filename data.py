@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pandas as pd
 from PIL import Image
 import torch
@@ -11,6 +12,29 @@ import deeplake
 from torch.utils.data import Dataset, DataLoader
 from typing import Optional
 import clip
+
+# Custom transform which injects local noise
+class AddNoiseToPatch:
+    def __init__(self, noise_level=0.1, patch_coords=(0, 0, 50, 50)):
+        self.noise_level = noise_level
+        self.patch_coords = patch_coords  # (x1, y1, x2, y2)
+
+    def __call__(self, img):
+        # Convert to numpy array
+        img_np = np.array(img)
+
+        # Extract patch coordinates
+        x1, y1, x2, y2 = self.patch_coords
+        
+        # Generate random noise
+        noise = np.random.normal(0, self.noise_level, img_np[y1:y2, x1:x2].shape).astype(np.uint8)
+
+        # Add noise to the patch
+        img_np[y1:y2, x1:x2] = np.clip(img_np[y1:y2, x1:x2] + noise, 0, 255)
+
+        # Convert back to PIL Image
+        return Image.fromarray(img_np)
+
 
 IMAGE_SIZE = 224
 TRAIN_TFMS = transforms.Compose([
@@ -27,6 +51,57 @@ TEST_TFMS = transforms.Compose([
     transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
 ])
 
+def get_noised_data(name, noise_size, root):
+
+    NOISE_TEST_TFMS = transforms.Compose([
+        transforms.Resize((256, 256)),
+        transforms.CenterCrop(224),
+        AddNoiseToPatch(noise_level=25, patch_coords=(50, 50, 50+noise_size, 50+noise_size)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+    ])
+
+    if name == 'MNSIT':
+        trainset = torchvision.datasets.MNIST(
+            root+'/train', train=True, download=True, transform=TRAIN_TFMS
+        )
+
+        normal_testset = torchvision.datasets.MNIST(
+            root+'/val', train=False, download=True, transform=TEST_TFMS
+        )
+
+        noised_testset = torchvision.datasets.MNIST(
+            root+'/noise-val', train=False, download=True, transform=NOISE_TEST_TFMS
+        )
+    elif name == 'CIFAR-10':
+        trainset = torchvision.datasets.CIFAR10(
+            root+'/train', train=True, download=True, transform=TRAIN_TFMS
+        )
+
+        normal_testset = torchvision.datasets.CIFAR10(
+            root+'/val', train=False, download=True, transform=TEST_TFMS
+        )
+
+        noised_testset = torchvision.datasets.CIFAR10(
+            root+'/noise-val', train=False, download=True, transform=NOISE_TEST_TFMS
+        )    
+    elif name == 'CIFAR-100':
+        trainset = torchvision.datasets.CIFAR100(
+            root+'/train', train=True, download=True, transform=TRAIN_TFMS
+        )
+
+        normal_testset = torchvision.datasets.CIFAR100(
+            root+'/val', train=False, download=True, transform=TEST_TFMS
+        )
+
+        noised_testset = torchvision.datasets.CIFAR100(
+            root+'/noise-val', train=False, download=True, transform=NOISE_TEST_TFMS
+        )
+    
+    else:
+        raise ValueError('Incorrect dataset name. Choose from [MNIST, CIFAR-10, CIFAR-100].')
+    
+    return trainset, normal_testset, noised_testset
 
 def get_custom_data(train_path: str, val_path: str, model_name: Optional[str] = None, processor: Optional[nn.Module] = None):
     if processor is not None:
