@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
+import timm
 import clip
 
 def load_resnet_ft(model_name, ft_type):
@@ -40,16 +41,22 @@ def load_clip(num_patches, num_classes, model_name):
 
     return model, processor, classifier
 
-def load_vit(model_name, ft_type):
+def get_vit_model_name(model_name):
     model_size = model_name.split("_")[1].lower()
     num_patches = model_name.split("_")[2]
 
     if model_size not in ["small", "base", "large"]:
         raise ValueError("Invalid model size.")
+
     if num_patches not in ["16", "32"]:
         raise ValueError("Invalid number of patches.")
 
     name = f"vit_{model_size}_patch{num_patches}_224"
+
+    return name
+
+def load_vit(model_name, ft_type):
+    name = get_vit_model_name(model_name)
     model = timm.create_model(name, pretrained=True)
 
     if ft_type not in ["full", "classifier"]:
