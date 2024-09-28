@@ -71,7 +71,7 @@ if __name__ == "__main__":
     parser.add_argument('--out_dir', type=str, help='Output directory. Default is output.', default='output')
     parser.add_argument('--num_patches', type=int, help='Number of patches for ViT. Choose from 16 and 32. Default is 32', default=32)
     parser.add_argument('--num_classes', type=int, help='Number of classification classes. 10 (default) for all datasets except cifar-100 which has 100 classes.', default=10)
-    parser.add_argument('--bias_evaluation', type=bool, default=False, help="Evaluate on biases of the dataset. Set it to true True if Bias Evaluation is required.", required=False)
+    parser.add_argument('--bias_evel', type=str, default=None, help="Evaluate on biases of the dataset. Choose from Texture, Edge and Color", required=False)
     parser.add_argument('--train_path', type=str, help='Path to training data. Required for bias evaluation', required=False)
     parser.add_argument('--val_path', type=str, help='Path to validation data. Required for bias evaluation', required=False)
     args = parser.parse_args()
@@ -84,8 +84,7 @@ if __name__ == "__main__":
     model, processor, classifier = load_clip(args.num_patches, args.num_classes, args.model_name)
     model.to(device)
 
-    if args.bias_evaluation == True:
-        print("Bias Evaluation Set to True... Evaluating on inductive biases")
+    if args.bias_eval is not None:
         train_ds, test_ds, class_text = get_custom_data(train_path=args.train_path, val_path=args.val_path, 
                                                         processor=processor)
         class_text = class_text.to(device)
@@ -111,14 +110,14 @@ if __name__ == "__main__":
 
     criterion = nn.CrossEntropyLoss()
     
-    if args.bias_evaluation == True:
+    if args.bias_eval is not None:
         eval_loss_nonsl, eval_acc_nonsl = eval_step_clip(model, classifier, train_dl, criterion, device, class_text, args.model_name, args.dataset)
-        print(f'============ Eval Acc on Non Stylized Dataset: {eval_acc_nonsl*100:.4f}%  ============')
-        print(f'============ Eval Loss on Non Stylized Dataset: {eval_loss_nonsl:.4f}  ============')
+        print(f'============ True Eval Acc: {eval_acc_nonsl*100:.4f}%  ============')
+        print(f'============ True : {eval_loss_nonsl:.4f}  ============')
         
         eval_loss, eval_acc = eval_step_clip(model, classifier, test_dl, criterion, device, class_text, args.model_name, args.dataset)
-        print(f'============ Eval Acc on Stylized Dataset: {eval_acc*100:.4f}%  ============')
-        print(f'============ Eval Loss on Stylized Dataset: {eval_loss:.4f}  ============')
+        print(f'============ Eval Acc on {args.bias_eval} dataset: {eval_acc*100:.4f}%  ============')
+        print(f'============ Eval Loss on {args.bias_eval} dataset: {eval_loss:.4f}  ============')
         
     else:  
         eval_loss, eval_acc = eval_step_clip(model, classifier, test_dl, criterion, device, class_text, args.model_name, args.dataset)
