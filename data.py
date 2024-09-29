@@ -35,6 +35,42 @@ class AddNoiseToPatch:
         # Convert back to PIL Image
         return Image.fromarray(img_np)
 
+class PatchScrambler:
+    def __init__(self, patch_size=16):
+        self.patch_size = patch_size
+    
+    def scramble(self, image):
+        c, h, w = image.shape
+        
+        # Checl if image is divisible by patch_size
+        assert h % self.patch_size == 0 and w % self.patch_size == 0, "Image size must be divisible by patch size"
+        
+        # Calculate number of patches along height and width
+        num_patches_h = h // self.patch_size
+        num_patches_w = w // self.patch_size
+        
+        # Split the image into patches: (C, num_patches_h, patch_size, num_patches_w, patch_size)
+        patches = image.unfold(1, self.patch_size, self.patch_size).unfold(2, self.patch_size, self.patch_size)
+        
+        # Reshape into (num_patches_h * num_patches_w, C, patch_size, patch_size)
+        patches = patches.contiguous().view(c, -1, self.patch_size, self.patch_size)
+        patches = patches.permute(1, 0, 2, 3)  # (num_patches, C, patch_size, patch_size)
+
+        # Randomly shuffle the patches
+        permuted_indices = torch.randperm(patches.size(0))
+        scrambled_patches = patches[permuted_indices]
+        
+        # Reshape back into original image form: (C, num_patches_h, patch_size, num_patches_w, patch_size)
+        scrambled_image = scrambled_patches.permute(1, 0, 2, 3).contiguous().view(c, num_patches_h, num_patches_w, self.patch_size, self.patch_size)
+        
+        # Reassemble the image from scrambled patches
+        scrambled_image = scrambled_image.permute(0, 1, 3, 2, 4).contiguous().view(c, h, w)
+        
+        return scrambled_image
+    
+    def __call__(self, image):
+        return self.scramble(image)
+
 
 IMAGE_SIZE = 224
 TRAIN_TFMS = transforms.Compose([
@@ -61,7 +97,7 @@ def get_noised_data(name, noise_size, root):
         transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
     ])
 
-    if name == 'MNSIT':
+    if name == 'MNIST':
         trainset = torchvision.datasets.MNIST(
             root+'/train', train=True, download=True, transform=TRAIN_TFMS
         )
@@ -102,6 +138,58 @@ def get_noised_data(name, noise_size, root):
         raise ValueError('Incorrect dataset name. Choose from [MNIST, CIFAR-10, CIFAR-100].')
     
     return trainset, normal_testset, noised_testset
+
+def get_scrambled_data(name, patch_size, root):
+    SCRAMBLE_TFMS = transforms.Compose([
+        transforms.Resize((256, 256)),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        PatchScrambler(patch_size=patch_size),
+        transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+    ])
+    
+    if name.upper() == 'MNIST':
+        trainset = torchvision.datasets.MNIST(
+            root+'/train', train=True, download=True, transform=TRAIN_TFMS
+        )
+
+        normal_testset = torchvision.datasets.MNIST(
+            root+'/val', train=False, download=True, transform=TEST_TFMS
+        )
+
+        scrambled_testset = torchvision.datasets.MNIST(
+            root+'/scrambled-val', train=False, download=True, transform=SCRAMBLE_TFMS
+        )
+    elif name.upper() == 'CIFAR-10':
+        trainset = torchvision.datasets.CIFAR10(
+            root+'/train', train=True, download=True, transform=TRAIN_TFMS
+        )
+
+        normal_testset = torchvision.datasets.CIFAR10(
+            root+'/val', train=False, download=True, transform=TEST_TFMS
+        )
+
+        scrambled_testset = torchvision.datasets.CIFAR10(
+            root+'/scrambled-val', train=False, download=True, transform=SCRAMBLE_TFMS
+        )    
+    elif name == 'CIFAR-100':
+        trainset = torchvision.datasets.CIFAR100(
+            root+'/train', train=True, download=True, transform=TRAIN_TFMS
+        )
+
+        normal_testset = torchvision.datasets.CIFAR100(
+            root+'/val', train=False, download=True, transform=TEST_TFMS
+        )
+
+        scrambled_testset = torchvision.datasets.CIFAR100(
+            root+'/scrambled-val', train=False, download=True, transform=SCRAMBLE_TFMS
+        )
+    
+    else:
+        raise ValueError('Incorrect dataset name. Choose from [MNIST, CIFAR-10, CIFAR-100].')
+    
+    return trainset, normal_testset, scrambled_testset
+    
 
 def get_custom_data(train_path: str, val_path: str, model_name: Optional[str] = None, processor: Optional[nn.Module] = None):
     if processor is not None:

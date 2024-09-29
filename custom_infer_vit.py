@@ -203,13 +203,6 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.savefig(f"{args.out_dir}/log/{args.bias_eval.lower()}_log_plot.png")
 
-    name = get_vit_model_name(args.model_name)
-    model = timm.create_model(name, pretrained=False)
-    model.load_state_dict(
-        torch.load(os.path.join(args.out_dir, f"model/best.pth"), weights_only=True)
-    )
-    model.to(device)
-
     if args.bias_eval.lower() == "color":
         custom_dataset_path = os.path.join(args.out_dir, "color")
     elif args.bias_eval.lower() == "shape":
