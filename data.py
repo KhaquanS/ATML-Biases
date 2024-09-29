@@ -45,22 +45,21 @@ class PatchScrambler:
         # Checl if image is divisible by patch_size
         assert h % self.patch_size == 0 and w % self.patch_size == 0, "Image size must be divisible by patch size"
         
-        # Calculate number of patches along height and width
         num_patches_h = h // self.patch_size
         num_patches_w = w // self.patch_size
         
-        # Split the image into patches: (C, num_patches_h, patch_size, num_patches_w, patch_size)
+        # Split image into patches
         patches = image.unfold(1, self.patch_size, self.patch_size).unfold(2, self.patch_size, self.patch_size)
         
         # Reshape into (num_patches_h * num_patches_w, C, patch_size, patch_size)
         patches = patches.contiguous().view(c, -1, self.patch_size, self.patch_size)
-        patches = patches.permute(1, 0, 2, 3)  # (num_patches, C, patch_size, patch_size)
+        patches = patches.permute(1, 0, 2, 3)
 
-        # Randomly shuffle the patches
+        # Shuffle the patches
         permuted_indices = torch.randperm(patches.size(0))
         scrambled_patches = patches[permuted_indices]
         
-        # Reshape back into original image form: (C, num_patches_h, patch_size, num_patches_w, patch_size)
+        # Reshape back into original image form
         scrambled_image = scrambled_patches.permute(1, 0, 2, 3).contiguous().view(c, num_patches_h, num_patches_w, self.patch_size, self.patch_size)
         
         # Reassemble the image from scrambled patches
