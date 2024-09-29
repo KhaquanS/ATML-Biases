@@ -69,7 +69,7 @@ if __name__ == "__main__":
     parser.add_argument('--model_name', type=str, default='clip-vit', help='Either clip-vit or clip-classifier. Default is clip-vit')
     parser.add_argument('--dataset', type=str, help='One of [MNIST, CIFAR-10, CIFAR-100, PACS, SVHN]. Default is CIFAR-10.', default='CIFAR-10', required=False)
     parser.add_argument('--out_dir', type=str, help='Output directory. Default is output.', default='output')
-    parser.add_argument('--num_patches', type=int, help='Number of patches for ViT. Choose from 16 and 32. Default is 32', default=32)
+    parser.add_argument('--patch_size', type=int, help='Number of patches for ViT. Choose from 16 and 32. Default is 32', default=32)
     parser.add_argument('--num_classes', type=int, help='Number of classification classes. 10 (default) for all datasets except cifar-100 which has 100 classes.', default=10)
     parser.add_argument('--bias_eval', type=str, default=None, help="Evaluate on biases of the dataset. Choose from Texture, Edge and Color", required=False)
     parser.add_argument('--train_path', type=str, help='Path to training data. Required for bias evaluation', required=False)
@@ -81,11 +81,16 @@ if __name__ == "__main__":
     num_workers = 2
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     
-    model, processor, classifier = load_clip(args.num_patches, args.num_classes, args.model_name)
+    model, processor, classifier = load_clip(args.patch_size, args.num_classes, args.model_name)
     model.to(device)
 
     if args.bias_eval is not None:
-        train_ds, test_ds, class_text = get_custom_data(train_path=args.train_path, val_path=args.val_path, 
+        if args.bias_eval == "Noise":
+            train_ds, test_ds, class_text = get_noised_data(args.dataset, args.patch_size, root=f'./{args.out_dir}/{args.dataset}', model_name=args.model_name)
+        elif args.bias_eval == "Scrambled":
+            train_ds, test_ds, class_text = get_scrambled_data(args.dataset, args.patch_size, root=f'./{args.out_dir}/{args.dataset}', model_name=args.model_name)
+        else:
+            train_ds, test_ds, class_text = get_custom_data(train_path=args.train_path, val_path=args.val_path, 
                                                         processor=processor)
         class_text = class_text.to(device)
     else:

@@ -87,7 +87,7 @@ TEST_TFMS = transforms.Compose([
     transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
 ])
 
-def get_noised_data(name, noise_size, root):
+def get_noised_data(name, noise_size, root, model_name: Optional[str]=None):
 
     NOISE_TEST_TFMS = transforms.Compose([
         transforms.Resize((256, 256)),
@@ -95,6 +95,16 @@ def get_noised_data(name, noise_size, root):
         AddNoiseToPatch(noise_level=25, patch_coords=(50, 50, 50+noise_size, 50+noise_size)),
         transforms.ToTensor(),
         transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+    ])
+    
+    if model_name is not None:
+        NOISE_TEST_TFMS = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.CenterCrop(224),
+        AddNoiseToPatch(noise_level=25, patch_coords=(50, 50, 50+noise_size, 50+noise_size)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.48145466, 0.4578275, 0.40821073],     # Same normalization as CLIP processor
+                         std=[0.26862954, 0.26130258, 0.27577711])
     ])
 
     if name == 'MNIST':
@@ -109,6 +119,9 @@ def get_noised_data(name, noise_size, root):
         noised_testset = torchvision.datasets.MNIST(
             root+'/noise-val', train=False, download=True, transform=NOISE_TEST_TFMS
         )
+        
+        labels = torch.cat([clip.tokenize(f"A photo of a number {i}" for i in range(10))])
+                                                                                    
     elif name == 'CIFAR-10':
         trainset = torchvision.datasets.CIFAR10(
             root+'/train', train=True, download=True, transform=TRAIN_TFMS
@@ -120,7 +133,10 @@ def get_noised_data(name, noise_size, root):
 
         noised_testset = torchvision.datasets.CIFAR10(
             root+'/noise-val', train=False, download=True, transform=NOISE_TEST_TFMS
-        )    
+        )
+        
+        labels = torch.cat([clip.tokenize(f"A photo of a {i}" for i in normal_testset.classes)])
+                                                                           
     elif name == 'CIFAR-100':
         trainset = torchvision.datasets.CIFAR100(
             root+'/train', train=True, download=True, transform=TRAIN_TFMS
@@ -133,13 +149,20 @@ def get_noised_data(name, noise_size, root):
         noised_testset = torchvision.datasets.CIFAR100(
             root+'/noise-val', train=False, download=True, transform=NOISE_TEST_TFMS
         )
+                                                                                    
+        labels = torch.cat([clip.tokenize(f"A photo of a {i}" for i in normal_testset.classes)])
+
     
     else:
         raise ValueError('Incorrect dataset name. Choose from [MNIST, CIFAR-10, CIFAR-100].')
     
+    if model_name is not None:
+        return normal_testset, noised_testset, labels
+    
     return trainset, normal_testset, noised_testset
 
-def get_scrambled_data(name, patch_size, root):
+def get_scrambled_data(name, patch_size, root, model_name: Optional[str]=None):
+    
     SCRAMBLE_TFMS = transforms.Compose([
         transforms.Resize((256, 256)),
         transforms.CenterCrop(224),
@@ -147,6 +170,16 @@ def get_scrambled_data(name, patch_size, root):
         PatchScrambler(patch_size=patch_size),
         transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
     ])
+    
+    if model_name is not None:
+        SCRAMBLE_TFMS = transforms.Compose([
+                transforms.Resize((224, 224)),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                PatchScrambler(patch_size=patch_size),
+                transforms.Normalize(mean=[0.48145466, 0.4578275, 0.40821073],     # Same normalization as CLIP processor
+                         std=[0.26862954, 0.26130258, 0.27577711])
+            ])
     
     if name.upper() == 'MNIST':
         trainset = torchvision.datasets.MNIST(
@@ -160,6 +193,9 @@ def get_scrambled_data(name, patch_size, root):
         scrambled_testset = torchvision.datasets.MNIST(
             root+'/scrambled-val', train=False, download=True, transform=SCRAMBLE_TFMS
         )
+        
+        labels = torch.cat([clip.tokenize(f"A photo of a number {digit}" for digit in range(10))])
+
     elif name.upper() == 'CIFAR-10':
         trainset = torchvision.datasets.CIFAR10(
             root+'/train', train=True, download=True, transform=TRAIN_TFMS
@@ -172,6 +208,9 @@ def get_scrambled_data(name, patch_size, root):
         scrambled_testset = torchvision.datasets.CIFAR10(
             root+'/scrambled-val', train=False, download=True, transform=SCRAMBLE_TFMS
         )    
+        
+        labels = torch.cat([clip.tokenize(f"A photo of a {i}" for i in normal_testset.classes)])
+
     elif name == 'CIFAR-100':
         trainset = torchvision.datasets.CIFAR100(
             root+'/train', train=True, download=True, transform=TRAIN_TFMS
@@ -184,10 +223,14 @@ def get_scrambled_data(name, patch_size, root):
         scrambled_testset = torchvision.datasets.CIFAR100(
             root+'/scrambled-val', train=False, download=True, transform=SCRAMBLE_TFMS
         )
+        labels = torch.cat([clip.tokenize(f"A photo of a {i}" for i in normal_testset.classes)])
+
     
     else:
         raise ValueError('Incorrect dataset name. Choose from [MNIST, CIFAR-10, CIFAR-100].')
     
+    if model_name is not None:
+        return normal_testset, scrambled_testset, labels
     return trainset, normal_testset, scrambled_testset
     
 
