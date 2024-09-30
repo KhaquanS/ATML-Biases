@@ -36,7 +36,7 @@ class AddNoiseToPatch:
         return Image.fromarray(img_np)
 
 class PatchScrambler:
-    def __init__(self, patch_size=16):
+    def __init__(self, patch_size=56):
         self.patch_size = patch_size
     
     def scramble(self, image):
