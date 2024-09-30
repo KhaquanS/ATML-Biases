@@ -93,7 +93,7 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, help='Learning Rate. Default is 1e-4', default=1e-4)
     parser.add_argument('--batch_size', type=int, help='Batch size. Default is 32.', default=32)
     parser.add_argument('--epochs', type=int, help='Number of fine-tuning epochs. Default is 5', default=5)
-    parser.add_argument('--patch_size', type=int, help='Specify the size of each patch. Default is 16.', default=16)
+    parser.add_argument('--patch_size', type=int, help='Specify the size of each patch. Default is 56.', default=56)
     
     args = parser.parse_args()
 
